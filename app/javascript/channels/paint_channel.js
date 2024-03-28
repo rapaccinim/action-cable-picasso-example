@@ -34,20 +34,24 @@ consumer.subscriptions.create("PaintChannel", {
         y: event.offsetY,
         state: action,
       });
-    }else{
-      if(!this.isPainting) return;
 
-      // Send to server every 8ms
-      if (Date.now() - this.lastSent > 8) {
-        this.perform("paint", {
-          x: event.offsetX,
-          y: event.offsetY,
-          state: "painting",
-        });
-        this.lastSent = Date.now();
-      }
-      this.paintOnCanvas(this.context, event.offsetX, event.offsetY);
+      return;
     }
+
+    // instead, if it's painting...
+
+    if(!this.isPainting) return;
+
+    // Send to server every 8ms
+    if (Date.now() - this.lastSent > 8) {
+      this.perform("paint", {
+        x: event.offsetX,
+        y: event.offsetY,
+        state: "painting",
+      });
+      this.lastSent = Date.now();
+    }
+    this.paintOnCanvas(this.context, event.offsetX, event.offsetY);
 
   },
 
@@ -75,8 +79,10 @@ consumer.subscriptions.create("PaintChannel", {
     if (data.state === "start" || data.state === "stop") {
       this.remoteLastX = data.x;
       this.remoteLastY = data.y;
-    } else {
-      this.paintOnCanvas(this.remoteContext, data.x, data.y);
+      return;
     }
+
+    // instead, paint using the remote context
+    this.paintOnCanvas(this.remoteContext, data.x, data.y);
   },
 });
