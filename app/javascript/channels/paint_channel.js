@@ -13,7 +13,57 @@ consumer.subscriptions.create("PaintChannel", {
     // we also need a remote context (what gets the receiver of the data)
     this.remoteContext = this.canvas.getContext("2d");
 
-    // TBD...
+    this.canvas.addEventListener("mousedown", this.handlePainting.bind(this, "start"));
+    this.canvas.addEventListener("mouseup", this.handlePainting.bind(this, "stop"));
+    this.canvas.addEventListener("mousemove", this.handlePainting.bind(this, "painting"));
+  },
+
+  // Add a bit of comments to this one
+  handlePainting(action, event) {
+    const isStartOrStop = action === "start" || action === "stop";
+
+    if (isStartOrStop) {
+      this.isPainting = action === "start";
+
+      this.lastX = event.offsetX;
+      this.lastY = event.offsetY;
+      this.lastSent = Date.now();
+
+      this.perform("paint", {
+        x: event.offsetX,
+        y: event.offsetY,
+        state: action,
+      });
+    }else{
+      if(!this.isPainting) return;
+
+      // Send to server every 8ms
+      if (Date.now() - this.lastSent > 8) {
+        this.perform("paint", {
+          x: event.offsetX,
+          y: event.offsetY,
+          state: "painting",
+        });
+        this.lastSent = Date.now();
+      }
+      this.paintOnCanvas(this.context, event.offsetX, event.offsetY);
+    }
+
+  },
+
+  paintOnCanvas(ctx, x, y) {
+    ctx.lineJoin = "round";
+    ctx.lineCap = "round";
+    // start from
+    ctx.beginPath();
+    // go to old coordinates
+    ctx.moveTo(this.lastX, this.lastY);
+    // go to new coordinates
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    // set new coordinates
+    this.lastX = x;
+    this.lastY = y;
   },
 
   disconnected() {
@@ -22,5 +72,11 @@ consumer.subscriptions.create("PaintChannel", {
 
   received(data) {
     // Called when there's incoming data on the websocket for this channel
-  }
+    if (data.state === "start" || data.state === "stop") {
+      this.remoteLastX = data.x;
+      this.remoteLastY = data.y;
+    } else {
+      this.paintOnCanvas(this.remoteContext, data.x, data.y);
+    }
+  },
 });
