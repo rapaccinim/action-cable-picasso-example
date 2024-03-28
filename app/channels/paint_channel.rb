@@ -1,6 +1,10 @@
 class PaintChannel < ApplicationCable::Channel
   def subscribed
-    # stream_from "some_channel"
+    stream_from "paint_channel"
+  end
+
+  def paint(data)
+    ActionCable.server.broadcast("paint_channel", data)
   end
 
   def unsubscribed
