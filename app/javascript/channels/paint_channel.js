@@ -51,21 +51,30 @@ consumer.subscriptions.create("PaintChannel", {
       });
       this.lastSent = Date.now();
     }
-    this.paintOnCanvas(this.context, event.offsetX, event.offsetY);
+    this.paintOnCanvas(this.context, false, event.offsetX, event.offsetY);
 
   },
 
-  paintOnCanvas(ctx, x, y) {
+  paintOnCanvas(ctx, isRemoteContext, x, y) {
     ctx.lineJoin = "round";
     ctx.lineCap = "round";
     // start from
     ctx.beginPath();
     // go to old coordinates
-    ctx.moveTo(this.lastX, this.lastY);
+    if (isRemoteContext) {
+      ctx.moveTo(this.remoteLastX, this.remoteLastY);
+    } else{
+      ctx.moveTo(this.lastX, this.lastY);
+    }
     // go to new coordinates
     ctx.lineTo(x, y);
     ctx.stroke();
     // set new coordinates
+    if (isRemoteContext) {
+      this.remoteLastX = x;
+      this.remoteLastY = y;
+      return;
+    }
     this.lastX = x;
     this.lastY = y;
   },
@@ -83,6 +92,6 @@ consumer.subscriptions.create("PaintChannel", {
     }
 
     // instead, paint using the remote context
-    this.paintOnCanvas(this.remoteContext, data.x, data.y);
+    this.paintOnCanvas(this.remoteContext, true, data.x, data.y);
   },
 });
